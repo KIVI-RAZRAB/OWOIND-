@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <!-- viewport-fit=cover критически важен для обработки отступов iPhone -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>OWOIND AI | Grey Edition</title>
     
@@ -19,7 +20,6 @@
             --border: rgba(255, 255, 255, 0.08);
         }
 
-        /* Общие настройки */
         * { 
             box-sizing: border-box; 
             margin: 0; 
@@ -37,7 +37,6 @@
             overflow: hidden;
         }
 
-        /* Шапка - Логотип слева */
         header {
             padding: 15px 20px;
             background: var(--panel);
@@ -45,7 +44,6 @@
             display: flex;
             align-items: center;
             justify-content: flex-start;
-            z-index: 10;
         }
 
         .logo { 
@@ -56,7 +54,6 @@
         }
         .logo span { color: var(--accent); }
 
-        /* Окно чата */
         #chat-window {
             flex: 1;
             overflow-y: auto;
@@ -64,7 +61,6 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            padding-bottom: 30px;
         }
 
         .message {
@@ -93,21 +89,15 @@
             border-bottom-left-radius: 4px;
         }
 
-        .img-container img {
-            width: 100%;
-            border-radius: 12px;
-            margin-top: 8px;
-            border: 1px solid var(--border);
-        }
-
-        /* Область ввода с учетом Safe Area для iPhone */
+        /* Область ввода — КРИТИЧЕСКИЙ БЛОК ДЛЯ IPHONE 16 */
         .input-area { 
             background: var(--panel); 
-            padding: 12px 12px 20px 12px;
-            /* Рассчитываем отступ: системный отступ iPhone + 30px запаса */
-            padding-bottom: calc(env(safe-area-inset-bottom, 12px) + 30px);
+            padding: 12px 12px;
+            /* Увеличиваем отступ снизу: env берет отступ системы + добавляем 60px сверху для подъема */
+            padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 60px); 
             border-top: 1px solid var(--border);
-            z-index: 10;
+            position: relative;
+            z-index: 100;
         }
 
         .input-box {
@@ -118,7 +108,6 @@
             align-items: center;
         }
 
-        /* Кнопка Новый чат */
         .control-btn {
             background: var(--ai-msg);
             border: 1px solid var(--border);
@@ -130,10 +119,7 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            transition: transform 0.1s, background 0.2s;
         }
-        
-        .control-btn:active { transform: scale(0.9); background: #333; }
 
         .input-wrapper {
             flex: 1;
@@ -153,7 +139,6 @@
             color: #fff; 
             outline: none; 
             font-size: 16px; 
-            width: 100%;
         }
 
         .send-btn {
@@ -166,15 +151,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
         }
 
-        /* Адаптация под телефоны */
         @media (max-width: 768px) {
             .message { max-width: 92%; font-size: 14px; }
             header { padding: 12px 15px; }
-            .input-area { padding-left: 8px; padding-right: 8px; }
-            .input-wrapper { padding-left: 12px; }
         }
     </style>
 </head>
@@ -185,17 +166,13 @@
 </header>
 
 <div id="chat-window">
-    <div class="message ai-message">Привет! Это owoind в сером стиле. Кнопки теперь на своих местах и удобны для телефонов.</div>
+    <div class="message ai-message">Привет! Я поднял поле ввода еще выше, чтобы на iPhone 16 всё работало идеально.</div>
 </div>
 
 <div class="input-area">
     <div class="input-box">
-        <!-- Кнопка очистки -->
         <button class="control-btn" id="new-chat-btn">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         </button>
         
         <div class="input-wrapper">
@@ -213,44 +190,34 @@
     const sendBtn = document.getElementById('send-btn');
     const newChatBtn = document.getElementById('new-chat-btn');
 
-    // Очистка чата
     newChatBtn.onclick = () => {
-        chat.innerHTML = '<div class="message ai-message">Чат очищен. Готов к новым вопросам!</div>';
+        chat.innerHTML = '<div class="message ai-message">Чат очищен. Готов к вопросам!</div>';
     };
 
     async function handleAction() {
         const text = input.value.trim();
         if (!text) return;
-
         addMsg(text, 'user-message');
         input.value = "";
-        
         const tempId = Date.now();
         addMsg("Думаю...", 'ai-message', null, tempId);
-
         const response = await processRequest(text);
-        
         const temp = document.getElementById(tempId);
         if(temp) temp.remove();
         addMsg(response.text, 'ai-message', response.images);
     }
 
     async function processRequest(text) {
-        const system = "Твоё имя owoind. Ты помощник на базе OpenAI. Отвечай на русском языке.";
         try {
-            // Генерация картинок
-            if (text.toLowerCase().includes("нарисуй") || text.toLowerCase().includes("img")) {
-                const seed = Math.floor(Math.random() * 999999);
-                const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(text)}?seed=${seed}&width=1024&height=1024&nologo=true&model=flux`;
-                return { text: "Ваше изображение готово:", images: [imgUrl] };
+            if (text.toLowerCase().includes("нарисуй")) {
+                const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(text)}?nologo=true&seed=${Date.now()}`;
+                return { text: "Готово:", images: [imgUrl] };
             }
-
-            // Текстовый запрос
-            const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}?model=openai&system=${encodeURIComponent(system)}`);
+            const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}?model=openai`);
             const data = await res.text();
             return { text: data.replace(/ChatGPT|OpenAI/gi, "owoind") };
         } catch (e) {
-            return { text: "Произошла ошибка при подключении к ядру." };
+            return { text: "Ошибка связи." };
         }
     }
 
@@ -258,24 +225,19 @@
         const div = document.createElement('div');
         div.className = `message ${className}`;
         if(id) div.id = id;
-        
-        const txt = document.createElement('div');
-        txt.innerText = text;
-        div.appendChild(txt);
-
+        div.innerText = text;
         if (images) {
             const container = document.createElement('div');
-            container.className = 'img-container';
+            container.style.marginTop = "10px";
             images.forEach(src => {
                 const img = document.createElement('img');
                 img.src = src;
-                img.loading = "lazy";
-                img.onload = () => chat.scrollTop = chat.scrollHeight;
+                img.style.width = "100%";
+                img.style.borderRadius = "10px";
                 container.appendChild(img);
             });
             div.appendChild(container);
         }
-
         chat.appendChild(div);
         chat.scrollTop = chat.scrollHeight;
     }
